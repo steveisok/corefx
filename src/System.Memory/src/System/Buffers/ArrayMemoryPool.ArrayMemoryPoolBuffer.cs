@@ -5,7 +5,7 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 
-#if !netstandard
+#if !netstandard && !MONO
 using Internal.Runtime.CompilerServices;
 #else
 using System.Runtime.CompilerServices;
@@ -53,7 +53,7 @@ namespace System.Buffers
             }
 
             protected
-#if netstandard // TryGetArray is exposed as "protected internal". Normally, the rules of C# dictate we override it as "protected" because the base class is
+#if MONO || netstandard // TryGetArray is exposed as "protected internal". Normally, the rules of C# dictate we override it as "protected" because the base class is
                 // in a different assembly. Except in the netstandard config where the base class is in the same assembly.
             internal
 #endif

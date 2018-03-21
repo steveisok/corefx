@@ -29,10 +29,10 @@ namespace System.Net.WebSockets
         private const int DefaultReceiveBufferSize = 0x1000;
         /// <summary>GUID appended by the server as part of the security key response.  Defined in the RFC.</summary>
         private const string WSServerGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
+#if !MONO
         /// <summary>Shared, lazily-initialized handler for when using default options.</summary>
         private static SocketsHttpHandler s_defaultHandler;
-
+#endif
         private readonly CancellationTokenSource _abortSource = new CancellationTokenSource();
         private WebSocketState _state = WebSocketState.Connecting;
         private WebSocket _webSocket;

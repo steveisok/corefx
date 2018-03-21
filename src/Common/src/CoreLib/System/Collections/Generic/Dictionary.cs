@@ -78,12 +78,13 @@ namespace System.Collections.Generic
             {
                 _comparer = comparer;
             }
-
+#if !MONO
             if (typeof(TKey) == typeof(string) && _comparer == null)
             {
                 // To start, move off default comparer for string which is randomised
                 _comparer = (IEqualityComparer<TKey>)NonRandomizedStringEqualityComparer.Default;
             }
+#endif
         }
 
         public Dictionary(IDictionary<TKey, TValue> dictionary) : this(dictionary, null) { }
@@ -149,7 +150,11 @@ namespace System.Collections.Generic
         {
             get
             {
-                return (_comparer == null || _comparer is NonRandomizedStringEqualityComparer) ? EqualityComparer<TKey>.Default : _comparer;
+                return (_comparer == null
+#if !MONO
+                    || _comparer is NonRandomizedStringEqualityComparer
+#endif
+                ) ? EqualityComparer<TKey>.Default : _comparer;
             }
         }
 
@@ -636,7 +641,9 @@ namespace System.Collections.Generic
                 {
                     if (entries[i].hashCode >= 0)
                     {
+#if !MONO
                         Debug.Assert(_comparer == null);
+#endif
                         entries[i].hashCode = (entries[i].key.GetHashCode() & 0x7FFFFFFF);
                     }
                 }
