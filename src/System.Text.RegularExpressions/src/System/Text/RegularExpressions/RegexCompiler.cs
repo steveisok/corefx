@@ -158,7 +158,7 @@ namespace System.Text.RegularExpressions
         {
             return typeof(RegexRunner).GetMethod(methname, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
         }
-
+#if FEATURE_COMPILED_LWCG
         /* 
          * Entry point to dynamically compile a regular expression.  The expression is compiled to 
          * an in-memory assembly.
@@ -167,7 +167,7 @@ namespace System.Text.RegularExpressions
         {
             return new RegexLWCGCompiler().FactoryInstanceFromCode(code, options);
         }
-
+#endif
         /*
          * Keeps track of an operation that needs to be referenced in the backtrack-jump
          * switch table, and that needs backtracking code to be emitted (if flags != 0)
