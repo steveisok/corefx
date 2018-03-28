@@ -5,7 +5,6 @@
 // This is the only concrete implementation of RegexRunnerFactory, 
 // but we cannot combine them due to RegexRunnerFactory having shipped public. 
 
-#if FEATURE_COMPILED_LWCG
 using System.Reflection.Emit;
 
 namespace System.Text.RegularExpressions
@@ -34,4 +33,3 @@ namespace System.Text.RegularExpressions
         }
     }
 }
-#endif
