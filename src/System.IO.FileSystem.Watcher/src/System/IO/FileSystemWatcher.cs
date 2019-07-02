@@ -391,12 +391,30 @@ namespace System.IO
                 throw new ArgumentException(SR.Format(SR.InvalidDirName_NotExists, path), nameof(path));
         }
 
+#if MONO
+        /// <summary>
+        /// Returns true if the path is effectively empty for the current OS.
+        /// This function is borrowed from PathInternal.Windows because Mono
+        /// on the desktop still needs to support the netfx behavior. 
+        /// EffectivelyEmpty means an empty span, null, or just spaces ((char)32).        
+        /// </summary>
+        private static bool IsEffectivelyEmpty(ReadOnlySpan<char> path)
+        {
+            return (path.IsEmpty || path.IndexOf(' ') > -1);
+        }
+#endif
+
         /// <summary>
         /// Sees if the name given matches the name filter we have.
         /// </summary>
         private bool MatchPattern(ReadOnlySpan<char> relativePath)
         {
+#if MONO
+            if (IsEffectivelyEmpty (relativePath))
+                return false;
+#endif
             ReadOnlySpan<char> name = IO.Path.GetFileName(relativePath);
+
             if (name.Length == 0)
                 return false;
 
