@@ -400,7 +400,16 @@ namespace System.IO
         /// </summary>
         private static bool IsEffectivelyEmpty(ReadOnlySpan<char> path)
         {
-            return (path.IsEmpty || path.IndexOf(' ') > -1);
+            if (path.IsEmpty)
+                return true;
+
+            foreach (char c in path)
+            {
+                if (c != ' ')
+                    return false;
+            }
+
+            return true;
         }
 #endif
 
