@@ -35,6 +35,7 @@ struct FileStatus
     int64_t BirthTimeNsec; // nanosecond part
     int64_t Dev;       // ID of the device containing the file
     int64_t Ino;       // inode number of the file
+    uint32_t UserFlags; // user defined flags
 };
 
 /* Provide consistent access to nanosecond fields, if they exist. */
