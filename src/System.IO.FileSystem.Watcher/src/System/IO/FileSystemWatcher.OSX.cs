@@ -9,10 +9,12 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text;
 
+#pragma warning disable SA1121 // we don't want to simplify built-ins here as we're using aliasing
 using CFStringRef = System.IntPtr;
 using FSEventStreamRef = System.IntPtr;
 using size_t = System.IntPtr;
 using FSEventStreamEventId = System.UInt64;
+using FSEventStreamEventFlags = Interop.EventStream.FSEventStreamEventFlags;
 using CFRunLoopRef = System.IntPtr;
 using Microsoft.Win32.SafeHandles;
 
@@ -87,38 +89,38 @@ namespace System.IO
 
         private CancellationTokenSource _cancellation;
 
-        private static Interop.EventStream.FSEventStreamEventFlags TranslateFlags(NotifyFilters flagsToTranslate)
+        private static FSEventStreamEventFlags TranslateFlags(NotifyFilters flagsToTranslate)
         {
-            Interop.EventStream.FSEventStreamEventFlags flags = 0;
+            FSEventStreamEventFlags flags = 0;
 
             // Always re-create the filter flags when start is called since they could have changed
             if ((flagsToTranslate & (NotifyFilters.Attributes | NotifyFilters.CreationTime | NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Size)) != 0)
             {
-                flags = Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemInodeMetaMod  |
-                        Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemFinderInfoMod |
-                        Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemModified      |
-                        Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemChangeOwner;
+                flags = FSEventStreamEventFlags.kFSEventStreamEventFlagItemInodeMetaMod |
+                        FSEventStreamEventFlags.kFSEventStreamEventFlagItemFinderInfoMod |
+                        FSEventStreamEventFlags.kFSEventStreamEventFlagItemModified |
+                        FSEventStreamEventFlags.kFSEventStreamEventFlagItemChangeOwner;
             }
             if ((flagsToTranslate & NotifyFilters.Security) != 0)
             {
-                flags |= Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemChangeOwner |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemXattrMod;
+                flags |= FSEventStreamEventFlags.kFSEventStreamEventFlagItemChangeOwner |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemXattrMod;
             }
             if ((flagsToTranslate & NotifyFilters.DirectoryName) != 0)
             {
-                flags |= Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsDir |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsSymlink |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed;
+                flags |= FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsDir |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsSymlink |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed;
             }
             if ((flagsToTranslate & NotifyFilters.FileName) != 0)
             {
-                flags |= Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsFile |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsSymlink |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved |
-                         Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed;
+                flags |= FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsFile |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsSymlink |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved |
+                         FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed;
             }
 
             return flags;
@@ -127,15 +129,15 @@ namespace System.IO
         private sealed class RunningInstance
         {
             // Flags used to create the event stream
-            private const Interop.EventStream.FSEventStreamCreateFlags EventStreamFlags = (Interop.EventStream.FSEventStreamCreateFlags.kFSEventStreamCreateFlagFileEvents | 
-                                                                       Interop.EventStream.FSEventStreamCreateFlags.kFSEventStreamCreateFlagNoDefer   | 
+            private const Interop.EventStream.FSEventStreamCreateFlags EventStreamFlags = (Interop.EventStream.FSEventStreamCreateFlags.kFSEventStreamCreateFlagFileEvents |
+                                                                       Interop.EventStream.FSEventStreamCreateFlags.kFSEventStreamCreateFlagNoDefer |
                                                                        Interop.EventStream.FSEventStreamCreateFlags.kFSEventStreamCreateFlagWatchRoot);
 
             // Weak reference to the associated watcher. A weak reference is used so that the FileSystemWatcher may be collected and finalized,
             // causing an active operation to be torn down.
             private readonly WeakReference<FileSystemWatcher> _weakWatcher;
 
-            // The user can input relative paths, which can muck with our path comparisons. Save off the 
+            // The user can input relative paths, which can muck with our path comparisons. Save off the
             // actual full path so we can use it for comparing
             private string _fullDirectory;
 
@@ -143,13 +145,13 @@ namespace System.IO
             private bool _includeChildren;
 
             // The bitmask of events that we want to send to the user
-            private Interop.EventStream.FSEventStreamEventFlags _filterFlags;
+            private FSEventStreamEventFlags _filterFlags;
 
             // The EventStream to listen for events on
             private SafeEventStreamHandle _eventStream;
 
 
-            // Callback delegate for the EventStream events 
+            // Callback delegate for the EventStream events
             private Interop.EventStream.FSEventStreamCallback _callback;
 
             // Token to monitor for cancellation requests, upon which processing is stopped and all
@@ -165,7 +167,7 @@ namespace System.IO
                 FileSystemWatcher watcher,
                 string directory,
                 bool includeChildren,
-                Interop.EventStream.FSEventStreamEventFlags filter,
+                FSEventStreamEventFlags filter,
                 CancellationToken cancelToken)
             {
                 Debug.Assert(string.IsNullOrEmpty(directory) == false);
@@ -386,33 +388,33 @@ namespace System.IO
                 if (context is null)
                 {
                     // Flow suppressed, just run here
-                    ProcessEvents(numEvents.ToInt32(), eventPaths, eventFlags, eventIds, watcher);
+                    ProcessEvents(numEvents.ToInt32(), eventPaths, new Span<FSEventStreamEventFlags>(eventFlags, numEvents.ToInt32()), new Span<FSEventStreamEventId>(eventIds, numEvents.ToInt32()), watcher);
                 }
                 else
                 {
                     ExecutionContext.Run(
                         context,
-                        (object o) => ((RunningInstance)o).ProcessEvents(numEvents.ToInt32(), eventPaths, eventFlags, eventIds, watcher),
+                        (object o) => ((RunningInstance)o).ProcessEvents(numEvents.ToInt32(), eventPaths, new Span<FSEventStreamEventFlags>(eventFlags, numEvents.ToInt32()), new Span<FSEventStreamEventId>(eventIds, numEvents.ToInt32()), watcher),
                         this);
                 }
             }
 
             private unsafe void ProcessEvents(int numEvents,
                 byte** eventPaths,
-                Interop.EventStream.FSEventStreamEventFlags[] eventFlags,
-                FSEventStreamEventId[] eventIds,
+                Span<FSEventStreamEventFlags> eventFlags,
+                Span<FSEventStreamEventId> eventIds,
                 FileSystemWatcher watcher)
             {
-                // Since renames come in pairs, when we find the first we need to search for the next one. Once we find it, we'll add it to this
-                // list so when the for-loop comes across it, we'll skip it since it's already been processed as part of the original of the pair.
-                List<FSEventStreamEventId> handledRenameEvents = null;
-                Memory<char>[] events = new Memory<char>[numEvents];
-                ParseEvents();
+                // Since renames come in pairs, when we reach the first we need to test for the next one if it is the case. If the next one belongs into the pair,
+                // we'll store the event id so when the for-loop comes across it, we'll skip it since it's already been processed as part of the original of the pair.
+                int? handledRenameEvents = null;
 
-                for (long i = 0; i < numEvents; i++)
+                for (int i = 0; i < numEvents; i++)
                 {
-                    ReadOnlySpan<char> path = events[i].Span;
-                    Debug.Assert(path[path.Length - 1] != '/', "Trailing slashes on events is not supported");
+                    using ParsedEvent parsedEvent = ParseEvent(eventPaths[i]);
+
+                    ReadOnlySpan<char> path = parsedEvent.Path;
+                    Debug.Assert(path[^1] != '/', "Trailing slashes on events is not supported");
 
                     // Match Windows and don't notify us about changes to the Root folder
                     if (_fullDirectory.Length >= path.Length && path.Equals(_fullDirectory.AsSpan(0, path.Length), StringComparison.OrdinalIgnoreCase))
@@ -427,7 +429,7 @@ namespace System.IO
                         watcher.OnError(new ErrorEventArgs(new IOException(SR.FSW_BufferOverflow, (int)eventFlags[i])));
                         break;
                     }
-                    else if ((handledRenameEvents != null) && (handledRenameEvents.Contains(eventIds[i])))
+                    else if (handledRenameEvents == i)
                     {
                         // If this event is the second in a rename pair then skip it
                         continue;
@@ -460,15 +462,15 @@ namespace System.IO
                         }
                         if (((eventType & WatcherChangeTypes.Renamed) > 0))
                         {
-                            // Find the rename that is paired to this rename, which should be the next rename in the list
-                            long pairedId = FindRenameChangePairedChange(i, eventFlags);
-                            if (pairedId == long.MinValue)
+                            // Find the rename that is paired to this rename.
+                            int? pairedId = FindRenameChangePairedChange(i, eventFlags, eventIds);
+                            if (!pairedId.HasValue)
                             {
-                                // Getting here means we have a rename without a pair, meaning it should be a create for the 
+                                // Getting here means we have a rename without a pair, meaning it should be a create for the
                                 // move from unwatched folder to watcher folder scenario or a move from the watcher folder out.
                                 // Check if the item exists on disk to check which it is
                                 // Don't send a new notification if we already sent one for this event.
-                                if (DoesItemExist(path, IsFlagSet(eventFlags[i], Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsFile)))
+                                if (DoesItemExist(path, eventFlags[i].HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagItemIsFile)))
                                 {
                                     if ((eventType & WatcherChangeTypes.Created) == 0)
                                     {
@@ -482,61 +484,65 @@ namespace System.IO
                             }
                             else
                             {
-                                // Remove the base directory prefix and add the paired event to the list of 
+                                // Remove the base directory prefix and add the paired event to the list of
                                 // events to skip and notify the user of the rename
-                                if (events[pairedId].Span.Length >= _fullDirectory.Length
-                                    && _fullDirectory.AsSpan().Equals(events[pairedId].Span.Slice(0, _fullDirectory.Length), StringComparison.OrdinalIgnoreCase))
+                                using (ParsedEvent pairedEvent = ParseEvent(eventPaths[pairedId.GetValueOrDefault()]))
                                 {
-                                    ReadOnlySpan<char> newPathRelativeName = events[pairedId].Span.Slice(_fullDirectory.Length);
+                                    ReadOnlySpan<char> newPathRelativeName = pairedEvent.Path;
+                                    if (newPathRelativeName.Length >= _fullDirectory.Length &&
+                                        newPathRelativeName.StartsWith(_fullDirectory, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        newPathRelativeName = newPathRelativeName.Slice(_fullDirectory.Length);
+                                    }
+
                                     watcher.NotifyRenameEventArgs(WatcherChangeTypes.Renamed, newPathRelativeName, relativePath);
                                 }
-                                else
-                                {
-                                    //if the base directory prefix isn't there, just use the full absolute path
-                                    watcher.NotifyRenameEventArgs(WatcherChangeTypes.Renamed, events[pairedId].Span, relativePath);
-                                }
-
-                                // Create a new list, if necessary, and add the event
-                                if (handledRenameEvents == null)
-                                {
-                                    handledRenameEvents = new List<FSEventStreamEventId>();
-                                }
-                                handledRenameEvents.Add(eventIds[pairedId]);
+                                handledRenameEvents = pairedId.GetValueOrDefault();
                             }
                         }
                     }
-
-                    ArraySegment<char> underlyingArray;
-                    if (MemoryMarshal.TryGetArray(events[i], out underlyingArray))
-                        ArrayPool<char>.Shared.Return(underlyingArray.Array);
                 }
 
                 this._context = ExecutionContext.Capture();
 
-                void ParseEvents()
+                ParsedEvent ParseEvent(byte* nativeEventPath)
                 {
-                    for (int i = 0; i < events.Length; i++)
+                    int byteCount = 0;
+                    Debug.Assert(nativeEventPath != null);
+                    byte* temp = nativeEventPath;
+
+                    // Finds the position of null character.
+                    while (*temp != 0)
                     {
-                        int byteCount = 0;
-                        Debug.Assert(eventPaths[i] != null);
-                        byte* temp = eventPaths[i];
-
-                        // Finds the position of null character.
-                        while (*temp != 0)
-                        {
-                            temp++;
-                            byteCount++;
-                        }
-
-                        Debug.Assert(byteCount > 0, "Empty events are not supported");
-                        events[i] = new Memory<char>(ArrayPool<char>.Shared.Rent(Encoding.UTF8.GetMaxCharCount(byteCount)));
-                        int charCount;
-
-                        // Converting an array of bytes to UTF-8 char array
-                        charCount = Encoding.UTF8.GetChars(new ReadOnlySpan<byte>(eventPaths[i], byteCount), events[i].Span);
-                        events[i] = events[i].Slice(0, charCount);
+                        temp++;
+                        byteCount++;
                     }
+
+                    Debug.Assert(byteCount > 0, "Empty events are not supported");
+                    char[] tempBuffer = ArrayPool<char>.Shared.Rent(Encoding.UTF8.GetMaxCharCount(byteCount));
+
+                    // Converting an array of bytes to UTF-8 char array
+                    int charCount = Encoding.UTF8.GetChars(new ReadOnlySpan<byte>(nativeEventPath, byteCount), tempBuffer);
+                    return new ParsedEvent(tempBuffer.AsSpan(0, charCount), tempBuffer);
                 }
+
+            }
+
+            private readonly ref struct ParsedEvent
+            {
+
+                public ParsedEvent(ReadOnlySpan<char> path, char[] tempBuffer)
+                {
+                    TempBuffer = tempBuffer;
+                    Path = path;
+                }
+
+                public readonly ReadOnlySpan<char> Path;
+
+                public readonly char[] TempBuffer;
+
+                public void Dispose() => ArrayPool<char>.Shared.Return(TempBuffer);
+
             }
 
             /// <summary>
@@ -568,15 +574,15 @@ namespace System.IO
                 if (eventIsCorrectType || ((allowDirs || allowFiles) && (eventIsLink)))
                 {
                     // Notify Created/Deleted/Renamed events.
-                    if (IsFlagSet(eventFlags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed))
+                    if (eventFlags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed))
                     {
                         eventType |= WatcherChangeTypes.Renamed;
                     }
-                    if (IsFlagSet(eventFlags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated))
+                    if (eventFlags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagItemCreated))
                     {
                         eventType |= WatcherChangeTypes.Created;
                     }
-                    if (IsFlagSet(eventFlags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved))
+                    if (eventFlags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagItemRemoved))
                     {
                         eventType |= WatcherChangeTypes.Deleted;
                     }
@@ -587,12 +593,12 @@ namespace System.IO
             private bool ShouldRescanOccur(Interop.EventStream.FSEventStreamEventFlags flags)
             {
                 // Check if any bit is set that signals that the caller should rescan
-                return (IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagMustScanSubDirs) ||
-                        IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagUserDropped)     ||
-                        IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagKernelDropped)   ||
-                        IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagRootChanged)     ||
-                        IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagMount)           ||
-                        IsFlagSet(flags, Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagUnmount));
+                return (flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagMustScanSubDirs) ||
+                        flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagUserDropped) ||
+                        flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagKernelDropped) ||
+                        flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagRootChanged) ||
+                        flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagMount) ||
+                        flags.HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagUnmount));
             }
 
             private bool CheckIfPathIsNested(ReadOnlySpan<char> eventPath)
@@ -603,35 +609,36 @@ namespace System.IO
                 return _includeChildren || _fullDirectory.AsSpan().StartsWith(System.IO.Path.GetDirectoryName(eventPath), StringComparison.OrdinalIgnoreCase);
             }
 
-            private long FindRenameChangePairedChange(
-                long currentIndex, 
-                Interop.EventStream.FSEventStreamEventFlags[] eventFlags)
+            private unsafe int? FindRenameChangePairedChange(
+                int currentIndex,
+                Span<FSEventStreamEventFlags> flags, Span<FSEventStreamEventId> ids)
             {
-                // Start at one past the current index and try to find the next Rename item, which should be the old path.
-                for (long i = currentIndex + 1; i < eventFlags.Length; i++)
+                // The rename event can be composed of two events. The first contains the original file name the second contains the new file name.
+                // Each of the events is delivered only when the corresponding folder is watched. It means both events are delivered when the rename/move
+                // occurs inside the watched folder. When the move has origin o final destination outside, only one event is delivered. To distinguish
+                // between two nonrelated events and the event which belong together the event ID is tested. Only related rename events differ in ID by one.
+                // This behavior isn't documented and there is an open radar http://www.openradar.me/13461247.
+
+                int nextIndex = currentIndex + 1;
+
+                if (nextIndex >= flags.Length)
+                    return null;
+
+                if (ids[currentIndex] + 1 == ids[nextIndex] &&
+                    flags[nextIndex].HasFlag(FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed))
                 {
-                    if (IsFlagSet(eventFlags[i], Interop.EventStream.FSEventStreamEventFlags.kFSEventStreamEventFlagItemRenamed))
-                    {
-                        // We found match, stop looking
-                        return i;
-                    }
+                    return nextIndex;
                 }
 
-                return long.MinValue;
+                return null;
             }
-
-            private static bool IsFlagSet(Interop.EventStream.FSEventStreamEventFlags flags, Interop.EventStream.FSEventStreamEventFlags value)
-            {
-                return (value & flags) == value;
-            }
-
             private static bool DoesItemExist(ReadOnlySpan<char> path, bool isFile)
             {
                 if (path.IsEmpty || path.Length == 0)
                     return false;
 
                 if (!isFile)
-                    return  FileSystem.DirectoryExists(path);
+                    return FileSystem.DirectoryExists(path);
 #if MONO
                 return path[path.Length - 1] == '/'
 #else
